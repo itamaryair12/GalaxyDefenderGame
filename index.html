@@ -71,12 +71,12 @@
 
         let playerX = canvas.width / 2;
         let playerY = canvas.height - 30;
-        let playerWidth = 30;
-        let playerHeight = 30;
+        let playerWidth = 50;
+        let playerHeight = 50;
 
         let enemies = [];
-        let enemyWidth = 30;
-        let enemyHeight = 30;
+        let enemyWidth = 40;
+        let enemyHeight = 40;
         let enemySpeed = 2;
         let enemyHorizontalSpeed = 1;
 
@@ -112,7 +112,13 @@
         bossImage.src = "boss.png"; // Ensure this path matches your directory structure
 
         const mineImage = new Image();
-        mineImage.src = "mine.png"; // Ensure the path matches the location of your mine image
+        mineImage.src = "mine2.png"; // Ensure the path matches the location of your mine image
+
+        const playerImage = new Image();
+        playerImage.src = "player-spaceship.png"; // Ensure the file is in your directory
+
+        const enemyImage = new Image();
+        enemyImage.src = "enemy-spaceship.png"; // Ensure the file is in your directory
 
         // Load background images
         const backgroundImages = [
@@ -167,14 +173,12 @@
         }
 
         function drawPlayer() {
-            ctx.fillStyle = "blue";
-            ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
+            ctx.drawImage(playerImage, playerX, playerY, playerWidth, playerHeight);
         }
 
         function drawEnemies() {
-            ctx.fillStyle = "red";
             enemies.forEach(enemy => {
-                ctx.fillRect(enemy.x, enemy.y, enemyWidth, enemyHeight);
+                ctx.drawImage(enemyImage, enemy.x, enemy.y, enemyWidth, enemyHeight);
             });
         }
 
