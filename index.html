@@ -114,6 +114,24 @@
         const mineImage = new Image();
         mineImage.src = "mine.png"; // Ensure the path matches the location of your mine image
 
+        // Load background images
+        const backgroundImages = [
+            "space-background1.jpg",
+            "space-background2.jpg",
+            "space-background3.jpg"
+        ];
+        const backgroundObjects = backgroundImages.map((src) => {
+            const img = new Image();
+            img.src = src;
+            return img;
+        });
+
+        // Function to draw the current background
+        function drawBackground() {
+            const currentBackground = Math.floor((currentLevel - 1) / 3) % backgroundObjects.length;
+            ctx.drawImage(backgroundObjects[currentBackground], 0, 0, canvas.width, canvas.height);
+        }
+
 
         // Added: Load sounds
         const backgroundMusic = document.getElementById("backgroundMusic");
@@ -264,6 +282,9 @@
         function updateGameArea() {
             if (isPaused || isGameOver) return; // Added: Stop updating if paused or game over
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background
+            drawBackground();
 
             if (playerHealth <= 0) {
                 displayGameOver();
