@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Defender</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        canvas {
+            background: black;
+            display: block;
+            cursor: none;
+        }
+        #muteButton, #pauseButton {
+            position: absolute;
+            top: 10px;
+            z-index: 1000;
+            padding: 10px;
+            background-color: #FFD700;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #muteButton {
+            right: 10px;
+        }
+        #pauseButton {
+            right: 120px; /* Position the pause button next to the mute button */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <!-- Added Pause Button -->
+    <button id="pauseButton">Pause</button>
+    <!-- Added Mute Button -->
+    <button id="muteButton">Mute</button>
+
+    <!-- Added Audio Elements -->
+    <audio id="backgroundMusic" loop>
+        <source src="background-music.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="shootSound">
+        <source src="shoot.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="explosionSound">
+        <source src="explosion.mp3" type="audio/mpeg">
+    </audio>
+
+       <!-- GameAnalytics -->
+<script>
+    (function(w,d,a,m){var s='script';var g='GameAnalytics';w[g]=w[g]||function(){(w[g].q=w[g].q||[]).push(arguments)},a=d.createElement(s),m=d.getElementsByTagName(s)[0];a.async=1;a.src='https://download.gameanalytics.com/js/GameAnalytics-4.0.9.min.js';m.parentNode.insertBefore(a,m)})(window,document);
+   
+    GameAnalytics("setEnabledInfoLog", true);
+    GameAnalytics("initialize", "bcdf69e44a025d11913d4abe37f58719", "3410821ffea3bdf00f4ace0c57ff249e9fa906d3");
+    </script>
+    <!-- End GameAnalytics -->
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        canvas.width = 1600;
+        canvas.height = 1200;
+        const ctx = canvas.getContext("2d");
+
+        const levels = 10;
+        let currentLevel = 1;
+        let score = 0;
+        let playerHealth = 100;
+
+        let playerX = canvas.width / 2;
+        let playerY = canvas.height - 30;
+        let playerWidth = 30;
+        let playerHeight = 30;
+
+        let enemies = [];
+        let enemyWidth = 30;
+        let enemyHeight = 30;
+        let enemySpeed = 2;
+        let enemyHorizontalSpeed = 1;
+
+        let enemyBullets = [];
+        let enemyBulletSpeed = 3;
+        let enemyBulletWidth = 5;
+        let enemyBulletHeight = 10;
+        let bossBullets = []; // **Added for Boss Shooting**
+
+
+        let bullets = [];
+        let bulletSpeed = 5;
+        let bulletWidth = 10;
+        let bulletHeight = 15;
+        
+
+        let powerUps = [];
+        let powerUpWidth = 20;
+        let powerUpHeight = 20;
+        let powerUpSpeed = 2;
+        let isPowerUpActive = true;
+        let powerUpActiveTime = 5000;
+
+        let gameInterval;
+        let isGameOver = false;
+        let isPaused = false; // Added: Pause state
+        let boss = null; // Will store the boss object
+
+        const bossBulletSpeed = 3; // **Boss bullet speed**
+
+        // **Added: Load Boss Image**
+        const bossImage = new Image();
+        bossImage.src = "boss.png"; // Ensure this path matches your directory structure
+
+
+        // Added: Load sounds
+        const backgroundMusic = document.getElementById("backgroundMusic");
+        const shootSound = document.getElementById("shootSound");
+        const explosionSound = document.getElementById("explosionSound");
+
+        backgroundMusic.volume = 0.5; // Adjust volume
+        backgroundMusic.play(); // Start background music
+
+        function spawnEnemies() {
+            if (currentLevel === levels) {
+                // **Master Level: Spawn Boss**
+                boss = {
+                    x: canvas.width / 2 - 100,
+                    y: 50,
+                    width: 200,
+                    height: 200,
+                    health: 50, // Number of hits required to destroy
+                    speedX: 2,
+                    speedY: 1
+                };
+
+                // **Boss Shooting Mechanic**
+                setInterval(() => {
+                    if (boss) {
+                        bossBullets.push({
+                            x: boss.x + boss.width / 2 - 5,
+                            y: boss.y + boss.height,
+                            speed: bossBulletSpeed
+                        });
+                    }
+                }, 1500); // Boss shoots every 1.5 seconds
+            }
+            else{
+                let numberOfEnemies=Math.round(currentLevel*1.1 + 1);
+                for (let i = 0; i < numberOfEnemies; i++) {
+                    enemies.push({
+                        x: Math.random() * (canvas.width - enemyWidth),
+                        y: Math.random() * (-400) - enemyHeight,
+                        horizontalSpeed: enemyHorizontalSpeed
+                    });
+                    setTimeout(enemyShoot, Math.random() * (6000 - 2000) + 2000, i);
+                }
+            }
+            
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = "blue";
+            ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = "red";
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, enemyWidth, enemyHeight);
+            });
+        }
+
+        function drawBoss() { // **Modified: Draw Boss as an Image**
+            if (boss) {
+                ctx.drawImage(bossImage, boss.x, boss.y, boss.width, boss.height);
+                ctx.fillStyle = "white";
+                ctx.font = "20px Arial";
+                ctx.fillText(`Boss Health: ${boss.health}`, boss.x + 50, boss.y - 10);
+            }
+        }
+
+        function drawEnemyBullets() {
+            ctx.fillStyle = "green";
+            enemyBullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, enemyBulletWidth, enemyBulletHeight);
+            });
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = "yellow";
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, bulletWidth, bulletHeight);
+            });
+        }
+
+        function drawPowerUps() {
+            ctx.fillStyle = "purple";
+            powerUps.forEach(powerUp => {
+                ctx.fillRect(powerUp.x, powerUp.y, powerUpWidth, powerUpHeight);
+            });
+        }
+
+        function drawHUD() {
+            ctx.fillStyle = "white";
+            ctx.font = "16px Arial";
+            ctx.fillText(`Level: ${currentLevel}`, 10, 20);
+            ctx.fillText(`Score: ${score}`, 10, 40);
+            ctx.fillText(`Health: ${playerHealth}`, 10, 60);
+
+            if (isPaused) {
+                // Display "Paused" message
+                ctx.font = "50px Arial";
+                ctx.fillStyle = "yellow";
+                ctx.fillText("PAUSED", canvas.width / 2 - 100, canvas.height / 2);
+            }
+        }
+
+        function enemyShoot(enemyIndex) {
+            if (enemies[enemyIndex]) {
+                enemyBullets.push({
+                    x: enemies[enemyIndex].x + enemyWidth / 2 - enemyBulletWidth / 2,
+                    y: enemies[enemyIndex].y + enemyHeight
+                });
+                setTimeout(enemyShoot, Math.random() * (6000 - 2000) + 2000, enemyIndex);
+            }
+        }
+
+        function updateGameArea() {
+            if (isPaused || isGameOver) return; // Added: Stop updating if paused or game over
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (playerHealth <= 0) {
+                displayGameOver();
+                return;
+            }
+
+            drawPlayer();
+            drawEnemies();
+            drawEnemyBullets();
+            drawBullets();
+            drawPowerUps();
+            drawHUD();
+            drawBoss(); // **Modified: Draw Boss**
+
+            if (boss) {
+                // **Added: Boss Logic**
+                boss.x += boss.speedX;
+                boss.y += boss.speedY;
+
+                // Reverse direction at canvas edges
+                if (boss.x <= 0 || boss.x + boss.width >= canvas.width) boss.speedX *= -1;
+                if (boss.y <= 0 || boss.y + boss.height >= canvas.height) boss.speedY *= -1;
+
+                // Check collision with bullets
+                bullets.forEach((bullet, index) => {
+                    if (
+                        bullet.x < boss.x + boss.width &&
+                        bullet.x + bulletWidth > boss.x &&
+                        bullet.y < boss.y + boss.height &&
+                        bullet.y + bulletHeight > boss.y
+                    ) {
+                        boss.health--;
+                        bullets.splice(index, 1); // Remove bullet
+
+                        if (boss.health <= 0) {
+                            explosionSound.currentTime = 0;
+                            explosionSound.play();
+                            boss = null; // Destroy the boss
+                            score += 500; // Bonus score
+                            currentLevel++; // Progress to the next level or win
+                        }
+                    }
+                });
+            }
+
+            else{
+
+                // Difficulty scaling: Increase speeds based on current level
+                enemySpeed = 1 + currentLevel * 0.2; // Faster enemies
+                enemyHorizontalSpeed = 0.5 + currentLevel * 0.2; // More horizontal movement
+                enemyBulletSpeed = 1 + currentLevel * 0.2; // Faster bullets
+
+                enemies.forEach((enemy, enemyIndex) => {
+                    enemy.y += enemySpeed;
+                    enemy.x += enemy.horizontalSpeed;
+
+                    if (playerX < enemy.x + enemyWidth &&
+                        playerX + playerWidth > enemy.x &&
+                        playerY < enemy.y + enemyHeight &&
+                        playerHeight + playerY > enemy.y) {
+                        enemies.splice(enemyIndex, 1);
+                        playerHealth -= 30;
+                    }
+
+                    if (enemy.x > canvas.width - enemyWidth || enemy.x < 0) {
+                        enemy.horizontalSpeed *= -1;
+                    }
+
+                    if (enemy.y > canvas.height) {
+                        enemies.splice(enemyIndex, 1);
+                        score++;
+                    }
+                });
+
+                powerUps.forEach((powerUp, index) => {
+                    powerUp.y += powerUpSpeed;
+                    if (powerUp.y > canvas.height) {
+                        powerUps.splice(index, 1);
+                    }
+
+                    if (playerX < powerUp.x + powerUpWidth &&
+                        playerX + playerWidth > powerUp.x &&
+                        playerY < powerUp.y + powerUpHeight &&
+                        playerHeight + playerY > powerUp.y) {
+                        powerUps.splice(index, 1);
+                        isPowerUpActive = true;
+                        setTimeout(() => { isPowerUpActive = false; }, powerUpActiveTime);
+                        bulletWidth = 20;
+                        setTimeout(() => { bulletWidth = 10; }, powerUpActiveTime);
+                    }
+                });
+
+                if (enemies.length === 0) {
+                    if (currentLevel < levels) {
+                        currentLevel++;
+                        GameAnalytics("addProgressionEvent", "Start", currentLevel.toString());
+                        spawnEnemies();
+                    } else {
+                        displayGameOver();
+                        clearInterval(gameInterval);
+                    }
+                }
+
+                enemyBullets.forEach((bullet, index) => {
+                    bullet.y += enemyBulletSpeed;
+                    if (bullet.y > canvas.height) {
+                        enemyBullets.splice(index, 1);
+                    }
+                    if (bullet.y > playerY && bullet.y < playerY + playerHeight &&
+                        bullet.x > playerX && bullet.x < playerX + playerWidth) {
+                        playerHealth -= 20;
+                        enemyBullets.splice(index, 1);
+                    }
+                });
+
+                bullets.forEach((bullet, bulletIndex) => {
+                    bullet.y -= bulletSpeed;
+                    if (bullet.y < 0) {
+                        bullets.splice(bulletIndex, 1);
+                    }
+
+                    enemies.forEach((enemy, enemyIndex) => {
+                        if (bullet.x < enemy.x + enemyWidth &&
+                            bullet.x + bulletWidth > enemy.x &&
+                            bullet.y < enemy.y + enemyHeight &&
+                            bullet.y + bulletHeight > enemy.y) {
+                            enemies.splice(enemyIndex, 1);
+                            bullets.splice(bulletIndex, 1);
+                            score += 50;
+
+                            if (Math.random() < 0.15) {
+                                powerUps.push({ x: enemy.x, y: enemy.y });
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        function displayGameOver() {
+            isGameOver = true; // Set game over state to true
+            canvas.style.cursor = "default"; // Make the cursor visible
+
+            ctx.fillStyle = "white";
+            ctx.font = "40px Arial";
+            ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2 - 20);
+            ctx.font = "20px Arial";
+            ctx.fillText("Your score: " + score, canvas.width / 2 - 60, canvas.height / 2 + 20);
+
+            // Draw Play Again button on canvas
+            ctx.fillStyle = "#FFD700"; // Gold color for the button
+            ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 40, 200, 40);
+            ctx.fillStyle = "black";
+            ctx.fillText("Play Again", canvas.width / 2 - 60, canvas.height / 2 + 70);
+        }
+
+        function resetGame() {
+            isGameOver = false; // Reset game over state
+            canvas.style.cursor = "none"; // Hide the cursor again
+            clearInterval(gameInterval); // Clear existing interval
+            currentLevel = 1;
+            score = 0;
+            playerHealth = 100;
+            enemies = [];
+            enemyBullets = [];
+            bullets = [];
+            powerUps = [];
+            spawnEnemies();
+            gameInterval = setInterval(updateGameArea, 10);
+        }
+
+        canvas.addEventListener("click", function(event) {
+        if (isGameOver) {
+            // Check if the click is within the Play Again button area
+            if (
+                event.clientX >= canvas.width / 2 - 100 && 
+                event.clientX <= canvas.width / 2 + 100 &&
+                event.clientY >= canvas.height / 2 + 40 &&
+                event.clientY <= canvas.height / 2 + 80
+            ) {
+                resetGame();
+            }
+        } else {
+            shoot();
+        }
+        });
+
+        canvas.addEventListener("mousemove", (event) => {
+            playerX = event.clientX - canvas.offsetLeft - playerWidth / 2;
+            playerY = event.clientY - canvas.offsetTop - playerHeight / 2;
+        });
+
+
+        function togglePause() { // Added: Pause functionality
+            isPaused = !isPaused;
+            if (isPaused) {
+                clearInterval(gameInterval); // Stop the game loop
+            } else {
+                gameInterval = setInterval(updateGameArea, 10); // Resume the game loop
+            }
+        }
+
+        // Added: Pause Button Event Listener
+        document.getElementById("pauseButton").addEventListener("click", togglePause);
+
+        canvas.addEventListener("click", shoot);
+
+        // Modified: Shooting with sound
+        function shoot() {
+            shootSound.currentTime = 0; // Reset to allow rapid firing
+            shootSound.play(); // Added: Play shooting sound
+            bullets.push({ x: playerX + playerWidth / 2 - bulletWidth / 2, y: playerY });
+        }
+
+        spawnEnemies();
+        gameInterval = setInterval(updateGameArea, 10);
+
+        // Added: Mute button functionality
+        let isMuted = false;
+        document.getElementById("muteButton").addEventListener("click", () => {
+            isMuted = !isMuted;
+            const volume = isMuted ? 0 : 0.5;
+            backgroundMusic.volume = volume;
+            shootSound.volume = volume;
+            explosionSound.volume = volume;
+            document.getElementById("muteButton").innerText = isMuted ? "Unmute" : "Mute";
+        });
+
+
+        document.body.addEventListener("click", () => {
+            backgroundMusic.play().catch((error) => {
+                console.error("Error playing background music:", error);
+            });
+        });
+    </script>
+</body>
+</html>
