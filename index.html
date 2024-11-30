@@ -411,9 +411,10 @@
 
                 // Check collision with the player
                 if (
-                    bullet.y + enemyBulletHeight > playerY &&
+                    bullet.x < playerX + playerWidth &&
                     bullet.x + enemyBulletWidth > playerX &&
-                    bullet.x < playerX + playerWidth
+                    bullet.y < playerY + playerHeight &&
+                    bullet.y + enemyBulletHeight > playerY
                 ) {
                     playerHealth -= 20; // Damage to the player
                     bossBullets.splice(index, 1); // Remove the bullet on collision
