@@ -122,7 +122,6 @@
 
         function spawnEnemies() {
             if (currentLevel === levels) {
-                // **Master Level: Spawn Boss**
                 boss = {
                     x: canvas.width / 2 - 100,
                     y: 50,
@@ -130,19 +129,9 @@
                     height: 200,
                     health: 50, // Number of hits required to destroy
                     speedX: 2,
-                    speedY: 1
+                    speedY: 1,
                 };
-
-                // **Boss Shooting Mechanic**
-                setInterval(() => {
-                    if (boss) {
-                        bossBullets.push({
-                            x: boss.x + boss.width / 2 - 5,
-                            y: boss.y + boss.height,
-                            speed: bossBulletSpeed
-                        });
-                    }
-                }, 1500); // Boss shoots every 1.5 seconds
+                startBossShooting(); // Call to start boss shooting
             }
             else{
                 let numberOfEnemies=Math.round(currentLevel*1.1 + 1);
@@ -170,6 +159,37 @@
             });
         }
 
+        function startBossShooting() {
+            if (boss) {
+                bossShootInterval = setInterval(() => {
+                    if (boss) {
+                        const directions = [
+                            { dx: 0, dy: -1 },  // Up
+                            { dx: 1, dy: -1 },  // Up-Right
+                            { dx: 1, dy: 0 },   // Right
+                            { dx: 1, dy: 1 },   // Down-Right
+                            { dx: 0, dy: 1 },   // Down
+                            { dx: -1, dy: 1 },  // Down-Left
+                            { dx: -1, dy: 0 },  // Left
+                            { dx: -1, dy: -1 }, // Up-Left
+                        ];
+
+                        // Generate bullets in all 8 directions
+                        directions.forEach(direction => {
+                            bossBullets.push({
+                                x: boss.x + boss.width / 2 - enemyBulletWidth / 2, // Start at boss center
+                                y: boss.y + boss.height / 2 - enemyBulletHeight / 2,
+                                dx: direction.dx, // Horizontal velocity
+                                dy: direction.dy, // Vertical velocity
+                            });
+                        });
+                    } else {
+                        clearInterval(bossShootInterval); // Stop shooting if boss is destroyed
+                    }
+                }, 1500); // Boss shoots every 1.5 seconds
+            }
+        }
+
         function drawBoss() { // **Modified: Draw Boss as an Image**
             if (boss) {
                 ctx.drawImage(bossImage, boss.x, boss.y, boss.width, boss.height);
@@ -177,6 +197,13 @@
                 ctx.font = "20px Arial";
                 ctx.fillText(`Boss Health: ${boss.health}`, boss.x + 50, boss.y - 10);
             }
+        }
+
+        function drawBossBullets() {
+            ctx.fillStyle = "orange"; // Boss bullet color
+            bossBullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, enemyBulletWidth, enemyBulletHeight);
+            });
         }
 
         function drawEnemyBullets() {
@@ -240,9 +267,11 @@
             drawBullets();
             drawPowerUps();
             drawHUD();
-            drawBoss(); // **Modified: Draw Boss**
 
             if (boss) {
+                drawBoss(); // Draw the boss
+                drawBossBullets(); // Draw boss bullets
+                updateBossBullets(); // Update boss bullets
                 // **Added: Boss Logic**
                 boss.x += boss.speedX;
                 boss.y += boss.speedY;
@@ -365,6 +394,31 @@
                     });
                 });
             }
+        }
+
+        function updateBossBullets() {
+            bossBullets.forEach((bullet, index) => {
+                bullet.x += bullet.dx * bossBulletSpeed; // Move horizontally
+                bullet.y += bullet.dy * bossBulletSpeed; // Move vertically
+
+                // Remove bullets that go off-screen
+                if (
+                    bullet.x < 0 || bullet.x > canvas.width ||
+                    bullet.y < 0 || bullet.y > canvas.height
+                ) {
+                    bossBullets.splice(index, 1);
+                }
+
+                // Check collision with the player
+                if (
+                    bullet.y + enemyBulletHeight > playerY &&
+                    bullet.x + enemyBulletWidth > playerX &&
+                    bullet.x < playerX + playerWidth
+                ) {
+                    playerHealth -= 20; // Damage to the player
+                    bossBullets.splice(index, 1); // Remove the bullet on collision
+                }
+            });
         }
 
         function displayGameOver() {
