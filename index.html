@@ -142,30 +142,28 @@
         backgroundMusic.play(); // Start background music
 
         function spawnEnemies() {
-            if (currentLevel === levels) {
+            if (currentLevel % 10 === 0) { // Boss appears every 10 levels
                 boss = {
                     x: canvas.width / 2 - 100,
                     y: 50,
                     width: 200,
                     height: 200,
-                    health: 50, // Number of hits required to destroy
-                    speedX: 2,
-                    speedY: 1,
+                    health: 50 + currentLevel * 2, // Increase boss health with level
+                    speedX: 2 + currentLevel * 0.1, // Boss becomes faster with level
+                    speedY: 1 + currentLevel * 0.1,
                 };
-                startBossShooting(); // Call to start boss shooting
-            }
-            else{
-                let numberOfEnemies=Math.round(currentLevel*1.1 + 1);
+                startBossShooting(); // Start boss shooting
+            } else {
+                let numberOfEnemies = Math.round(currentLevel * 1.1 + 1);
                 for (let i = 0; i < numberOfEnemies; i++) {
                     enemies.push({
                         x: Math.random() * (canvas.width - enemyWidth),
                         y: Math.random() * (-400) - enemyHeight,
-                        horizontalSpeed: enemyHorizontalSpeed
+                        horizontalSpeed: enemyHorizontalSpeed,
                     });
                     setTimeout(enemyShoot, Math.random() * (6000 - 2000) + 2000, i);
                 }
             }
-            
         }
 
         function drawPlayer() {
@@ -256,16 +254,16 @@
 
         function drawHUD() {
             ctx.fillStyle = "white";
-            ctx.font = "16px Arial";
-            ctx.fillText(`Level: ${currentLevel}`, 10, 20);
-            ctx.fillText(`Score: ${score}`, 10, 40);
-            ctx.fillText(`Health: ${playerHealth}`, 10, 60);
+            ctx.font = "32px Arial";
+            ctx.fillText(`Level: ${currentLevel}`, 10, 30);
+            ctx.fillText(`Score: ${score}`, 10, 60);
+            ctx.fillText(`Health: ${playerHealth}`, 10, 90);
 
             if (isPaused) {
                 // Display "Paused" message
-                ctx.font = "50px Arial";
+                ctx.font = "60px Arial";
                 ctx.fillStyle = "yellow";
-                ctx.fillText("PAUSED", canvas.width / 2 - 100, canvas.height / 2);
+                ctx.fillText("PAUSED", canvas.width / 2 - 150, canvas.height / 2);
             }
         }
 
@@ -325,9 +323,10 @@
                             if (boss.health <= 0) {
                                 explosionSound.currentTime = 0;
                                 explosionSound.play();
-                                boss = null; // Destroy the boss
+                                boss = null; // Remove the boss
                                 score += 500; // Bonus score
                                 currentLevel++; // Progress to the next level
+                                spawnEnemies(); // Spawn enemies for the next level
                             }
                         }
                     } else {
@@ -368,32 +367,38 @@
                 });
 
                 powerUps.forEach((powerUp, index) => {
-                    powerUp.y += powerUpSpeed;
+                    powerUp.y += powerUpSpeed; // Move power-ups downwards
                     if (powerUp.y > canvas.height) {
-                        powerUps.splice(index, 1);
+                        powerUps.splice(index, 1); // Remove power-ups that move off the screen
                     }
 
-                    if (playerX < powerUp.x + powerUpWidth &&
+                    // Check for collision between player and power-up
+                    if (
+                        playerX < powerUp.x + powerUpWidth &&
                         playerX + playerWidth > powerUp.x &&
                         playerY < powerUp.y + powerUpHeight &&
-                        playerHeight + playerY > powerUp.y) {
-                        powerUps.splice(index, 1);
-                        isPowerUpActive = true;
-                        setTimeout(() => { isPowerUpActive = false; }, powerUpActiveTime);
-                        bulletWidth = 20;
-                        setTimeout(() => { bulletWidth = 10; }, powerUpActiveTime);
+                        playerHeight + playerY > powerUp.y
+                    ) {
+                        powerUps.splice(index, 1); // Remove power-up after collection
+                        isPowerUpActive = true; // Activate power-up
+
+                        // Add 10 lives when collecting the power-up
+                        playerHealth += 10;
+
+                        // Ensure health doesn't exceed 100 (or maximum health)
+                        if (playerHealth > 100) playerHealth = 100;
+
+                        // Deactivate the power-up after a set time (if you want a time-based effect)
+                        setTimeout(() => {
+                            isPowerUpActive = false;
+                        }, powerUpActiveTime);
                     }
                 });
 
-                if (enemies.length === 0) {
-                    if (currentLevel < levels) {
-                        currentLevel++;
-                        GameAnalytics("addProgressionEvent", "Start", currentLevel.toString());
-                        spawnEnemies();
-                    } else {
-                        displayGameOver();
-                        clearInterval(gameInterval);
-                    }
+                if (enemies.length === 0 && !boss) {
+                    currentLevel++;
+                    GameAnalytics("addProgressionEvent", "Start", currentLevel.toString());
+                    spawnEnemies(); // Continue to the next level
                 }
 
                 enemyBullets.forEach((bullet, index) => {
