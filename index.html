@@ -111,6 +111,9 @@
         const bossImage = new Image();
         bossImage.src = "boss.png"; // Ensure this path matches your directory structure
 
+        const mineImage = new Image();
+        mineImage.src = "mine.png"; // Ensure the path matches the location of your mine image
+
 
         // Added: Load sounds
         const backgroundMusic = document.getElementById("backgroundMusic");
@@ -214,9 +217,15 @@
         }
 
         function drawBullets() {
-            ctx.fillStyle = "yellow";
             bullets.forEach(bullet => {
-                ctx.fillRect(bullet.x, bullet.y, bulletWidth, bulletHeight);
+                if (boss) {
+                    // Draw mines
+                    ctx.drawImage(mineImage, bullet.x, bullet.y, bullet.width, bullet.height);
+                } else {
+                    // Regular bullets
+                    ctx.fillStyle = "yellow";
+                    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                }
             });
         }
 
@@ -282,22 +291,28 @@
 
                 // Check collision with bullets
                 bullets.forEach((bullet, index) => {
-                    if (
-                        bullet.x < boss.x + boss.width &&
-                        bullet.x + bulletWidth > boss.x &&
-                        bullet.y < boss.y + boss.height &&
-                        bullet.y + bulletHeight > boss.y
-                    ) {
-                        boss.health--;
-                        bullets.splice(index, 1); // Remove bullet
-
-                        if (boss.health <= 0) {
-                            explosionSound.currentTime = 0;
-                            explosionSound.play();
-                            boss = null; // Destroy the boss
-                            score += 500; // Bonus score
-                            currentLevel++; // Progress to the next level or win
+                    if (boss) {
+                        // Check collision with the boss
+                        if (
+                            bullet.x < boss.x + boss.width &&
+                            bullet.x + bullet.width > boss.x &&
+                            bullet.y < boss.y + boss.height &&
+                            bullet.y + bullet.height > boss.y
+                        ) {
+                            boss.health--;
+                            bullets.splice(index, 1); // Remove the mine
+                            if (boss.health <= 0) {
+                                explosionSound.currentTime = 0;
+                                explosionSound.play();
+                                boss = null; // Destroy the boss
+                                score += 500; // Bonus score
+                                currentLevel++; // Progress to the next level
+                            }
                         }
+                    } else {
+                        // Regular bullet logic for enemies
+                        bullet.y -= bulletSpeed;
+                        if (bullet.y < 0) bullets.splice(index, 1);
                     }
                 });
             }
@@ -490,11 +505,27 @@
 
         canvas.addEventListener("click", shoot);
 
-        // Modified: Shooting with sound
         function shoot() {
             shootSound.currentTime = 0; // Reset to allow rapid firing
-            shootSound.play(); // Added: Play shooting sound
-            bullets.push({ x: playerX + playerWidth / 2 - bulletWidth / 2, y: playerY });
+            shootSound.play(); // Play shooting sound
+
+            if (boss) {
+                // Add mines as bullets in the boss level
+                bullets.push({
+                    x: playerX + playerWidth / 2 - 15, // Adjust to center the mine
+                    y: playerY - 15,                  // Position slightly above the player
+                    width: 30,                        // Set mine size
+                    height: 30,
+                });
+            } else {
+                // Regular bullets for non-boss levels
+                bullets.push({
+                    x: playerX + playerWidth / 2 - bulletWidth / 2,
+                    y: playerY,
+                    width: bulletWidth,
+                    height: bulletHeight,
+                });
+            }
         }
 
         spawnEnemies();
