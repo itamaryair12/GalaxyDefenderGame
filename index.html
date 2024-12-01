@@ -81,7 +81,7 @@
         let enemyHorizontalSpeed = 1;
 
         let enemyBullets = [];
-        let enemyBulletSpeed = 3;
+        let enemyBulletSpeed = 5;
         let enemyBulletWidth = 15;
         let enemyBulletHeight = 20;
         let bossBullets = []; // **Added for Boss Shooting**
@@ -352,7 +352,7 @@
                 // Difficulty scaling: Increase speeds based on current level
                 enemySpeed = 1 + currentLevel * 0.2; // Faster enemies
                 enemyHorizontalSpeed = 0.5 + currentLevel * 0.2; // More horizontal movement
-                enemyBulletSpeed = 1 + currentLevel * 0.2; // Faster bullets
+                enemyBulletSpeed = 1 + currentLevel * 0.3; // Faster bullets
 
                 enemies.forEach((enemy, enemyIndex) => {
                     enemy.y += enemySpeed;
@@ -438,7 +438,8 @@
                             bullets.splice(bulletIndex, 1);
                             score += 50;
 
-                            if (Math.random() < 0.15) {
+                            const extraLifeProbability = Math.max(0.15 - currentLevel * 0.01, 0.05); // Minimum 5% chance
+                            if (Math.random() < extraLifeProbability) {
                                 powerUps.push({ x: enemy.x, y: enemy.y });
                             }
                         }
@@ -479,9 +480,10 @@
 
             ctx.fillStyle = "white";
             ctx.font = "40px Arial";
-            ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2 - 20);
+            ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2 - 60);
             ctx.font = "20px Arial";
-            ctx.fillText("Your score: " + score, canvas.width / 2 - 60, canvas.height / 2 + 20);
+            ctx.fillText("Your score: " + score, canvas.width / 2 - 60, canvas.height / 2 - 20);
+            ctx.fillText("Level reached: " + currentLevel, canvas.width / 2 - 80, canvas.height / 2 + 20);
 
             // Draw Play Again button on canvas
             ctx.fillStyle = "#FFD700"; // Gold color for the button
