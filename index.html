@@ -71,31 +71,31 @@
 
         let playerX = canvas.width / 2;
         let playerY = canvas.height - 30;
-        let playerWidth = 50;
-        let playerHeight = 50;
+        let playerWidth = 90;
+        let playerHeight = 90;
 
         let enemies = [];
-        let enemyWidth = 40;
-        let enemyHeight = 40;
+        let enemyWidth = 70;
+        let enemyHeight = 70;
         let enemySpeed = 2;
         let enemyHorizontalSpeed = 1;
 
         let enemyBullets = [];
         let enemyBulletSpeed = 3;
-        let enemyBulletWidth = 5;
-        let enemyBulletHeight = 10;
+        let enemyBulletWidth = 15;
+        let enemyBulletHeight = 20;
         let bossBullets = []; // **Added for Boss Shooting**
 
 
         let bullets = [];
         let bulletSpeed = 5;
-        let bulletWidth = 10;
-        let bulletHeight = 15;
+        let bulletWidth = 20;
+        let bulletHeight = 25;
         
 
         let powerUps = [];
-        let powerUpWidth = 20;
-        let powerUpHeight = 20;
+        let powerUpWidth = 30;
+        let powerUpHeight = 30;
         let powerUpSpeed = 2;
         let isPowerUpActive = true;
         let powerUpActiveTime = 5000;
@@ -119,6 +119,15 @@
 
         const enemyImage = new Image();
         enemyImage.src = "enemy-spaceship.png"; // Ensure the file is in your directory
+
+        const playerBulletImage = new Image();
+        playerBulletImage.src = "player-bullet.png";
+
+        const enemyBulletImage = new Image();
+        enemyBulletImage.src = "enemy-bullet.png";
+
+        const extraLifeImage = new Image();
+        extraLifeImage.src = "extra-life.png";
 
         // Load background images
         const backgroundImages = [
@@ -230,29 +239,26 @@
         }
 
         function drawEnemyBullets() {
-            ctx.fillStyle = "green";
             enemyBullets.forEach(bullet => {
-                ctx.fillRect(bullet.x, bullet.y, enemyBulletWidth, enemyBulletHeight);
+                ctx.drawImage(enemyBulletImage, bullet.x, bullet.y, enemyBulletWidth, enemyBulletHeight);
             });
         }
 
         function drawBullets() {
             bullets.forEach(bullet => {
                 if (boss) {
-                    // Draw mines
+                    // Draw mines during boss level
                     ctx.drawImage(mineImage, bullet.x, bullet.y, bullet.width, bullet.height);
                 } else {
-                    // Regular bullets
-                    ctx.fillStyle = "yellow";
-                    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+                    // Draw regular bullets for non-boss levels
+                    ctx.drawImage(playerBulletImage, bullet.x, bullet.y, bullet.width, bullet.height);
                 }
             });
         }
 
         function drawPowerUps() {
-            ctx.fillStyle = "purple";
             powerUps.forEach(powerUp => {
-                ctx.fillRect(powerUp.x, powerUp.y, powerUpWidth, powerUpHeight);
+                ctx.drawImage(extraLifeImage, powerUp.x, powerUp.y, powerUpWidth, powerUpHeight);
             });
         }
 
@@ -544,8 +550,8 @@
                 bullets.push({
                     x: playerX + playerWidth / 2 - 15, // Adjust to center the mine
                     y: playerY - 15,                  // Position slightly above the player
-                    width: 30,                        // Set mine size
-                    height: 30,
+                    width: 60,                        // Set mine size
+                    height: 60,
                 });
             } else {
                 // Regular bullets for non-boss levels
