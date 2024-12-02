@@ -222,12 +222,28 @@
             }
         }
 
-        function drawBoss() { // **Modified: Draw Boss as an Image**
+        function drawBoss() {
             if (boss) {
+                // Draw the boss image
                 ctx.drawImage(bossImage, boss.x, boss.y, boss.width, boss.height);
-                ctx.fillStyle = "white";
-                ctx.font = "20px Arial";
-                ctx.fillText(`Boss Health: ${boss.health}`, boss.x + 50, boss.y - 10);
+
+                // Draw the health bar
+                const barWidth = 100; // Set the health bar width
+                const barHeight = 10; // Set the health bar height
+                const barX = boss.x + (boss.width / 2) - (barWidth / 2); // Center the bar above the boss
+                const barY = boss.y - 15; // Position above the boss
+
+                // Calculate the width of the health based on remaining health
+                const healthRatio = boss.health / (50 + currentLevel * 2); // Adjust based on max health
+                const healthBarWidth = barWidth * healthRatio;
+
+                // Draw the background of the health bar
+                ctx.fillStyle = "red"; // Background color (empty health)
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                // Draw the foreground of the health bar
+                ctx.fillStyle = "green"; // Foreground color (current health)
+                ctx.fillRect(barX, barY, healthBarWidth, barHeight);
             }
         }
 
