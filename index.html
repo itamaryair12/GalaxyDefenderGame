@@ -5,30 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Galaxy Defender</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
-        canvas {
-            background: black;
-            display: block;
-            cursor: none;
-        }
-        #muteButton, #pauseButton {
+        #pauseButton, #muteButton {
             position: absolute;
             top: 10px;
             z-index: 1000;
-            padding: 10px;
-            background-color: #FFD700;
+            width: 100px; /* Increased size */
+            height: 100px; /* Increased size */
+            border-radius: 50%; /* Circular shape */
             border: none;
-            font-size: 16px;
+            font-size: 20px; /* Larger text */
+            font-weight: bold;
+            color: white;
             cursor: pointer;
+            transition: transform 0.2s ease, background-color 0.3s ease;
         }
-        #muteButton {
-            right: 10px;
-        }
+    
         #pauseButton {
-            right: 120px; /* Position the pause button next to the mute button */
+            right: 140px; /* Positioned next to the mute button */
+            background: linear-gradient(45deg, #ff4b2b, #ff416c); /* Gradient color */
+            box-shadow: 0 8px 15px rgba(255, 65, 108, 0.3); /* Glow effect */
+        }
+    
+        #muteButton {
+            right: 20px;
+            background: linear-gradient(45deg, #1e90ff, #87cefa); /* Gradient color */
+            box-shadow: 0 8px 15px rgba(30, 144, 255, 0.3); /* Glow effect */
+        }
+    
+        /* Add hover effects */
+        #pauseButton:hover, #muteButton:hover {
+            transform: scale(1.1); /* Slightly enlarge on hover */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); /* Enhanced shadow */
+        }
+    
+        /* Add pressed effect */
+        #pauseButton:active, #muteButton:active {
+            transform: scale(0.95); /* Slightly shrink on click */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
     </style>
 </head>
@@ -495,17 +508,48 @@
             canvas.style.cursor = "default"; // Make the cursor visible
 
             ctx.fillStyle = "white";
-            ctx.font = "40px Arial";
-            ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2 - 60);
-            ctx.font = "20px Arial";
-            ctx.fillText("Your score: " + score, canvas.width / 2 - 60, canvas.height / 2 - 20);
-            ctx.fillText("Level reached: " + currentLevel, canvas.width / 2 - 80, canvas.height / 2 + 20);
 
-            // Draw Play Again button on canvas
+            // Display "Game Over" message
+            ctx.font = "60px Arial"; // Larger font for "Game Over"
+            ctx.fillText("Game Over!", canvas.width / 2 - 150, canvas.height / 2 - 80);
+
+            // Display "Level Reached" below "Game Over"
+            ctx.font = "30px Arial"; // Bigger font for "Level Reached"
+            ctx.fillText("Level reached: " + currentLevel, canvas.width / 2 - 110, canvas.height / 2 - 20);
+
+            // Display "Your Score" below "Level Reached"
+            ctx.font = "20px Arial"; // Regular font for the score
+            ctx.fillText("Your score: " + score, canvas.width / 2 - 60, canvas.height / 2 + 20);
+
+            // Draw Play Again button
             ctx.fillStyle = "#FFD700"; // Gold color for the button
-            ctx.fillRect(canvas.width / 2 - 100, canvas.height / 2 + 40, 200, 40);
+            const buttonWidth = 240; // Increased width
+            const buttonHeight = 60; // Increased height
+            const buttonX = canvas.width / 2 - buttonWidth / 2;
+            const buttonY = canvas.height / 2 + 60;
+            ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+            // Button Text
             ctx.fillStyle = "black";
-            ctx.fillText("Play Again", canvas.width / 2 - 60, canvas.height / 2 + 70);
+            ctx.font = "30px Arial"; // Larger font for button text
+            ctx.fillText("Play Again", canvas.width / 2 - 75, buttonY + buttonHeight / 2 + 10);
+
+            // Adjust click area
+            canvas.addEventListener("click", function handleClick(event) {
+                const rect = canvas.getBoundingClientRect();
+                const clickX = event.clientX - rect.left;
+                const clickY = event.clientY - rect.top;
+
+                if (
+                    clickX >= buttonX &&
+                    clickX <= buttonX + buttonWidth &&
+                    clickY >= buttonY &&
+                    clickY <= buttonY + buttonHeight
+                ) {
+                    canvas.removeEventListener("click", handleClick); // Prevent multiple resets
+                    resetGame(); // Restart the game
+                }
+            });
         }
 
         function resetGame() {
