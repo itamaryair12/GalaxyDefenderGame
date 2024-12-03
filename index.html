@@ -113,6 +113,13 @@
         let isPowerUpActive = true;
         let powerUpActiveTime = 5000;
 
+        let magicPowerUps = [];
+        let magicWidth = 30;
+        let magicHeight = 30;
+        let magicSpeed = 2;
+        let isMagicActive = false; // Tracks if special shoots are enabled
+        let magicActiveTime = 5000; // Duration of special shoots (5 seconds)
+
         let gameInterval;
         let isGameOver = false;
         let isPaused = false; // Added: Pause state
@@ -141,6 +148,9 @@
 
         const extraLifeImage = new Image();
         extraLifeImage.src = "extra-life.png";
+
+        const magicImage = new Image();
+        magicImage.src = "magic.png"; // Use the correct image name
 
         // Load background images
         const backgroundImages = [
@@ -191,6 +201,16 @@
                     });
                     setTimeout(enemyShoot, Math.random() * (6000 - 2000) + 2000, i);
                 }
+            }
+        }
+
+        function spawnMagicPowerUp() {
+            const probability = 0.5; // 10% chance of spawning magic power-up
+            if (Math.random() < probability) {
+                magicPowerUps.push({
+                    x: Math.random() * (canvas.width - magicWidth),
+                    y: -magicHeight, // Start above the screen
+                });
             }
         }
 
@@ -291,6 +311,12 @@
             });
         }
 
+        function drawMagicPowerUps() {
+            magicPowerUps.forEach((magic) => {
+                ctx.drawImage(magicImage, magic.x, magic.y, magicWidth, magicHeight);
+            });
+        }
+
         function drawHUD() {
             ctx.fillStyle = "white";
             ctx.font = "32px Arial";
@@ -328,11 +354,14 @@
                 return;
             }
 
+            updateMagicPowerUps();
+
             drawPlayer();
             drawEnemies();
             drawEnemyBullets();
             drawBullets();
             drawPowerUps();
+            drawMagicPowerUps();
             drawHUD();
 
             if (boss) {
@@ -358,7 +387,7 @@
                             bullet.y + bullet.height > boss.y
                         ) {
                             boss.health--;
-                            bullets.splice(index, 1); // Remove the mine
+                            bullets.splice(index, 1); // Remove the bullet
                             if (boss.health <= 0) {
                                 explosionSound.currentTime = 0;
                                 explosionSound.play();
@@ -369,9 +398,34 @@
                             }
                         }
                     } else {
-                        // Regular bullet logic for enemies
-                        bullet.y -= bulletSpeed;
-                        if (bullet.y < 0) bullets.splice(index, 1);
+                        // Move bullet
+                        bullet.y -= bulletSpeed; // Move vertically
+                        bullet.x += bullet.dx || 0; // Move horizontally if dx is defined
+
+                        // Remove bullet if it leaves the screen
+                        if (bullet.y < 0 || bullet.x < 0 || bullet.x > canvas.width) {
+                            bullets.splice(index, 1);
+                        }
+
+                        // Check collision with enemies
+                        enemies.forEach((enemy, enemyIndex) => {
+                            if (
+                                bullet.x < enemy.x + enemyWidth &&
+                                bullet.x + bullet.width > enemy.x &&
+                                bullet.y < enemy.y + enemyHeight &&
+                                bullet.y + bullet.height > enemy.y
+                            ) {
+                                enemies.splice(enemyIndex, 1); // Remove enemy
+                                bullets.splice(index, 1); // Remove bullet
+                                score += 50; // Increase score
+
+                                // Chance to spawn extra life (or other power-ups)
+                                const extraLifeProbability = Math.max(0.15 - currentLevel * 0.01, 0.05); // Minimum 5% chance
+                                if (Math.random() < extraLifeProbability) {
+                                    powerUps.push({ x: enemy.x, y: enemy.y });
+                                }
+                            }
+                        });
                     }
                 });
             }
@@ -503,6 +557,46 @@
             });
         }
 
+        function updateMagicPowerUps() {
+            magicPowerUps.forEach((magic, index) => {
+                magic.y += magicSpeed; // Move downwards
+
+                // Remove if out of bounds (off the bottom of the screen)
+                if (magic.y > canvas.height) {
+                    magicPowerUps.splice(index, 1);
+                    return; // Exit this iteration to avoid further checks
+                }
+
+                // Check collision with the player
+                if (
+                    playerX < magic.x + magicWidth &&
+                    playerX + playerWidth > magic.x &&
+                    playerY < magic.y + magicHeight &&
+                    playerY + playerHeight > magic.y
+                ) {
+                    // Collision detected, activate magic!
+                    magicPowerUps.splice(index, 1); // Remove magic power-up
+                    activateMagic(); // Activate special shoot
+
+                    // Play a sound effect for picking up the magic power-up (if applicable)
+                    const magicPickupSound = document.getElementById("magicPickupSound");
+                    if (magicPickupSound) {
+                        magicPickupSound.currentTime = 0; // Reset sound playback
+                        magicPickupSound.play();
+                    }
+                }
+            });
+        }
+
+        function activateMagic() {
+            isMagicActive = true;
+
+            // Reset magic after duration
+            setTimeout(() => {
+                isMagicActive = false;
+            }, magicActiveTime);
+        }
+
         function displayGameOver() {
             isGameOver = true; // Set game over state to true
             canvas.style.cursor = "default"; // Make the cursor visible
@@ -565,6 +659,7 @@
             powerUps = [];
             spawnEnemies();
             gameInterval = setInterval(updateGameArea, 10);
+            setInterval(spawnMagicPowerUp, 5000);
         }
 
         canvas.addEventListener("click", function(event) {
@@ -595,6 +690,7 @@
                 clearInterval(gameInterval); // Stop the game loop
             } else {
                 gameInterval = setInterval(updateGameArea, 10); // Resume the game loop
+                setInterval(spawnMagicPowerUp, 15000);
             }
         }
 
@@ -607,13 +703,39 @@
             shootSound.currentTime = 0; // Reset to allow rapid firing
             shootSound.play(); // Play shooting sound
 
-            if (boss) {
-                // Add mines as bullets in the boss level
+            if (isMagicActive) {
+                // Special shoot: Multiple bullets in a spread pattern
+                bullets.push(
+                    {
+                        x: playerX + playerWidth / 2 - 15, // Center bullet
+                        y: playerY - 15,
+                        width: 10,
+                        height: 30,
+                        dx: 0, // Straight up
+                    },
+                    {
+                        x: playerX + playerWidth / 2 - 15, // Slightly angled left
+                        y: playerY - 15,
+                        width: 10,
+                        height: 30,
+                        dx: -2, // Move diagonally left
+                    },
+                    {
+                        x: playerX + playerWidth / 2 - 15, // Slightly angled right
+                        y: playerY - 15,
+                        width: 10,
+                        height: 30,
+                        dx: 2, // Move diagonally right
+                    }
+                );
+            } else if (boss) {
+                // Special mines as bullets in boss level
                 bullets.push({
                     x: playerX + playerWidth / 2 - 15, // Adjust to center the mine
                     y: playerY - 15,                  // Position slightly above the player
                     width: 60,                        // Set mine size
                     height: 60,
+                    dx: 0,                            // No horizontal movement
                 });
             } else {
                 // Regular bullets for non-boss levels
@@ -622,12 +744,14 @@
                     y: playerY,
                     width: bulletWidth,
                     height: bulletHeight,
+                    dx: 0, // No horizontal movement
                 });
             }
         }
 
         spawnEnemies();
         gameInterval = setInterval(updateGameArea, 10);
+        setInterval(spawnMagicPowerUp, 15000);
 
         // Added: Mute button functionality
         let isMuted = false;
